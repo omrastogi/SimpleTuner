@@ -46,9 +46,11 @@ def load_config(args: dict = None, exit_on_error: bool = False):
         config_backend_path = "config"
         if config_env and config_env != "default" and config_env is not None:
             config_backend_path = os.path.join("config", config_env)
+        
+        config_backend_path = os.environ.get("CONFIG_PATH", "config/config")
         StateTracker.set_config_path(config_backend_path)
         logger.info("Using {} configuration backend.".format(config_backend))
-        mapped_config = helpers[config_backend]()
+        mapped_config = helpers[config_backend](f"{config_backend_path}.{config_backend}")
         if config_backend == "cmd":
             return mapped_config
 

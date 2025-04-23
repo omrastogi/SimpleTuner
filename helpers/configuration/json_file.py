@@ -39,14 +39,13 @@ def normalize_args(args_dict):
     return normalized
 
 
-def load_json_config():
+def load_json_config(config_json_path):
     """
     Load configuration from a JSON file that directly specifies command-line arguments.
 
     :param json_path: The path to the JSON file.
     :return: A dictionary containing the configuration.
     """
-    config_json_path = "config/config.json"
     env = os.environ.get(
         "SIMPLETUNER_ENVIRONMENT",
         os.environ.get("SIMPLETUNER_ENV", os.environ.get("ENV", None)),
