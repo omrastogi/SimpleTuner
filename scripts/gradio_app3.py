@@ -116,6 +116,17 @@ class HiDreamModelWrapper:
                 multiplier=lora_scale,
             )
             self.wrapper.onfly_merge(weight=lora_weight)
+            
+            # Check for adapter_prompt.txt in the same directory as the adapter
+            adapter_dir = Path(adapter_path).parent
+            prompt_file = adapter_dir / "adapter_prompt.txt"
+            
+            if prompt_file.exists():
+                self.adapter_prompt = prompt_file.read_text().strip()
+                print(f"[✓] Loaded adapter prompt from {prompt_file}")
+            else:
+                self.adapter_prompt = self.args.adapter_prompt
+                print("[i] Using default adapter prompt")
         except Exception:
             traceback.print_exc()
             self.wrapper = None
