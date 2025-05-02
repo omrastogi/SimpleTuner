@@ -4,6 +4,14 @@
 This is a fork of **SimpleTuner**, tuned specifically for **HiDream** training and inference workflows.
 
 ---
+## 🎨 Character Results
+
+![HiDream Character Examples](asset/HiDream_Lora_Characters.png)
+
+Character LoRA models trained with SimpleTuner demonstrate high-quality results while maintaining consistency with the base model's style.
+
+---
+
 
 ## 🛠️ Setup
 
@@ -56,7 +64,7 @@ python setup.py install
 job_id: marlowe
 folder_path: "/mnt/data/Marlowe"
 pretrained_model_name_or_path: "HiDream-ai/HiDream-I1-Dev"
-adapter_prompt: "MarloweFemale, young adult, fair complexion, slim frame, long wavy chestnut-brown hair parted to the side, blue-green almond eyes, defined arched brows, heart-shaped face and full lips"
+adapter_prompt: "MarloweFemale, young woman with almond-shaped eyes, softly contoured high cheekbones, a delicate straight nose, full natural lips, heart-shaped face, and a smooth jawline with gentle definition."
 val_prompt: "posing confidently in a cozy reading nook by a tall bookshelf, warm ambient lighting, casual attire"
 prompt_file: "/mnt/data/test_prompts.txt"
 output_base_dir: "output/characters/"
@@ -81,7 +89,7 @@ CUDA_VISIBLE_DEVICES=0 python run_training.py preconfig/marlowe.yaml
 ```bash
 python scripts/infer_hidream_lora.py \
   --adapter_path output/characters/marlowe/pytorch_lora_weights.safetensors \
-  --prompt "MarloweFemale, young adult, fair complexion, slim frame, long wavy chestnut-brown hair parted to the side, blue-green almond eyes, defined arched brows, heart-shaped face and full lips" \
+  --prompt "MarloweFemale, young woman with almond-shaped eyes, softly contoured high cheekbones, a delicate straight nose, full natural lips, heart-shaped face, and a smooth jawline with gentle definition." \
   --guidance_scale 4.5 \
   --negative_prompt "bad anatomy, bad proportions, malformed limbs, extra limbs, missing fingers, mutated hands, deformed face, poorly drawn face, blurry eyes, disfigured features, unnatural expression, lowres, blurry, pixelated, watermark, logo, unnatural skin tone, glitch, artifact, noise, distortion, ugly" \
   --output_dir generations/marlowe
