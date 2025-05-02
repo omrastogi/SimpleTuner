@@ -1,7 +1,7 @@
 # SimpleTuner Playground – HiDream
 
 **SimpleTuner Playground** is designed for fast experimentation and benchmarking.  
-This is a fork of **SimpleTuner**, tuned specifically for **HiDream** training and inference workflows.
+This is a fork of **SimpleTuner**, tuned for **HiDream** training and inference workflows.
 
 ---
 ## 🎨 Character Results
