@@ -1,0 +1,13 @@
+job_id: <character_id>
+folder_path: "<CharacterFolder>"
+pretrained_model_name_or_path: "HiDream-ai/HiDream-I1-Dev"
+adapter_prompt: <character description>
+val_prompt: <validation prompt scene>
+prompt_file: "<promptPath>"
+output_base_dir: "output/lora_characters/"
+factor: 64
+algo: lora
+linear_alpha: 1.0
+multiplier: 1.0
+max_train_steps: 3000
+learning_rate: 1e-4

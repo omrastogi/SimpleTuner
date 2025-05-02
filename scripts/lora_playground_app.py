@@ -116,7 +116,7 @@ class HiDreamModelWrapper:
                 multiplier=lora_scale,
             )
             self.wrapper.onfly_merge(weight=lora_weight)
-            
+
             # Check for adapter_prompt.txt in the same directory as the adapter
             adapter_dir = Path(adapter_path).parent
             prompt_file = adapter_dir / "adapter_prompt.txt"
@@ -125,40 +125,58 @@ class HiDreamModelWrapper:
                 self.adapter_prompt = prompt_file.read_text().strip()
                 print(f"[✓] Loaded adapter prompt from {prompt_file}")
             else:
-                self.adapter_prompt = self.args.adapter_prompt
+                self.adapter_prompt = args.adapter_prompt
                 print("[i] Using default adapter prompt")
         except Exception:
             traceback.print_exc()
             self.wrapper = None
 
     def replace_adapter(self, path: str, scale: float, weight: float, use_cfg_zero: bool):
-        """Unload previous LoRA/pipeline, optionally rebuild, then load new LoRA."""
-        # restore transformer if a LoRA is currently merged
+        # ── clean up any existing LoRA ──
         if self.wrapper:
-            self.wrapper.onfly_restore()
-
-        # if pipeline flavour changes, tear down and rebuild
+            try:
+                for l in self.wrapper.loras:
+                    if hasattr(l, "cached_org_weight"):
+                        l.onfly_restore()
+            except Exception:
+                print("[!] restore failed — skipping")
+            self.wrapper = None                      # <─ KEY LINE
+    
+        # rebuild pipeline if CFG‑Zero state changed
         if use_cfg_zero != self.use_cfg_zero:
             self._unload_pipeline()
             self.use_cfg_zero = use_cfg_zero
-            self.adapter_path = None     # start with clean transformer
             self._load_model()
 
-        # merge the new adapter
+        # ── merge the new adapter ──
         self.lora_scale, self.lora_weight = scale, weight
         self._apply_adapter(path, scale, weight)
 
     # ---------- inference ---------- #
     @torch.inference_mode()
-    def generate(self, prompt, width=1024, height=1024, steps=50, guidance_scale=5.0):
+    def generate(
+        self,          
+        prompt, 
+        negative_prompt="",
+        width=1024, 
+        height=1024, 
+        steps=50, 
+        guidance_scale=5.0):
+
+        print(width, height)
+
         full_prompt = f"{self.adapter_prompt} {prompt}".strip()
         t5, llama, neg_t5, neg_llama, pooled, neg_pooled = self.pipe.encode_prompt(
             prompt=full_prompt,
             prompt_2=full_prompt,
             prompt_3=full_prompt,
             prompt_4=full_prompt,
+            negative_prompt=negative_prompt,
+            negative_prompt_2=negative_prompt,
+            negative_prompt_3=negative_prompt,
+            negative_prompt_4=negative_prompt,
             num_images_per_prompt=1,
-        )
+            )
         img = self.pipe(
             t5_prompt_embeds=t5,
             llama_prompt_embeds=llama,
@@ -191,6 +209,7 @@ choices = []
 if args.adapter_folder and Path(args.adapter_folder).is_dir():
     choices = sorted([p.name for p in Path(args.adapter_folder).iterdir() if p.is_dir()])
 
+
 # ─────────────────── initial wrapper ─────────────────────────── #
 model = HiDreamModelWrapper(
     adapter_path=args.adapter_path if args.adapter_path and Path(args.adapter_path).exists() else None,
@@ -205,6 +224,7 @@ with gr.Blocks(title="HiDream Inference Playground") as demo:
     gr.Markdown("## HiDream Inference Playground")
 
     if choices:
+        choices.append("NA")
         gr.Markdown("### Adapter Selection")
         dd            = gr.Dropdown(choices, label="Adapters")
         scale_slider  = gr.Slider(0.0, 1.0, step=0.05, value=args.lora_scale,  label="LoRA Scale (multiplier)")
@@ -217,8 +237,11 @@ with gr.Blocks(title="HiDream Inference Playground") as demo:
         load_btn.click(lambda: "⏳ Loading adapter…", None, status_box, show_progress=False)
 
         def _load(sel_name, sc, wt, cfg_flag):
-            if not sel_name:
-                return "⚠️ Select an adapter."
+            if sel_name=="NA":
+                if model.wrapper:
+                    model.wrapper.onfly_restore()
+                    model.adapter_prompt = "A realistic image of"
+                return "No Adapter"
             folder = Path(args.adapter_folder) / sel_name
             safes  = list(folder.glob("*.safetensors"))
             if not safes:
@@ -233,15 +256,77 @@ with gr.Blocks(title="HiDream Inference Playground") as demo:
 
     # generation widgets
     prompt   = gr.Textbox(value="A cozy cabin under the aurora", label="Prompt")
+    neg_prompt = gr.Textbox(
+        value=(
+            "bad anatomy, bad proportions, malformed limbs, extra limbs, missing fingers, "
+            "mutated hands, deformed face, poorly drawn face, blurry eyes, disfigured features, "
+            "unnatural expression, lowres, blurry, pixelated, watermark, logo, unnatural skin tone, "
+            "glitch, artifact, noise, distortion, ugly"
+        ),
+        label="Negative Prompt (optional)"
+    )
     with gr.Row():
-        w_slider  = gr.Slider(256, 1536, step=64, value=1024, label="Width")
-        h_slider  = gr.Slider(256, 1536, step=64, value=1024, label="Height")
-        step_sl   = gr.Slider(10,  80,   step=10, value=50,  label="Steps")
-        gs_slider = gr.Slider(1.0, 20.0, step=0.5, value=4.5, label="Guidance Scale")
-    out_img = gr.Image(type="filepath")
-    gr.Button("Generate").click(model.generate,
-                                 [prompt, w_slider, h_slider, step_sl, gs_slider],
-                                 out_img)
+        with gr.Column(scale=2):
+           size_dd = gr.Dropdown(
+                    choices=[
+                        "1024 × 1024 (Square)",
+                        "768 × 1360 (Portrait)",
+                        "1360 × 768 (Landscape)",
+                        "880 × 1168 (Portrait)",
+                        "1168 × 880 (Landscape)",
+                        "1248 × 832 (Landscape)",
+                        "832 × 1248 (Portrait)",
+                    ],
+                    value="1024 × 1024 (Square)",
+                    label="Image Size",
+                    interactive=True,
+                )
+        
+        with gr.Column(scale=1):
+            step_sl = gr.Slider(
+                minimum=10,
+                maximum=80,
+                step=10,
+                value=50,
+                label="Steps",
+                container=True,
+                interactive=True
+            )
+            
+            gs_slider = gr.Slider(
+                minimum=1.0,
+                maximum=20.0,
+                step=0.5,
+                value=4.5,
+                label="Guidance Scale",
+                container=True,
+                interactive=True
+            )
+            
+    out_img = gr.Image(
+        type="filepath",
+        container=True,
+        show_label=False
+    )
+    def get_dimensions(size_choice):
+        dims = {
+            "1024 × 1024 (Square)": (1024, 1024),
+            "768 × 1360 (Portrait)": (768, 1360),
+            "1360 × 768 (Landscape)": (1360, 768),
+            "880 × 1168 (Portrait)": (880, 1168),
+            "1168 × 880 (Landscape)": (1168, 880),
+            "1248 × 832 (Landscape)": (1248, 832),
+            "832 × 1248 (Portrait)": (832, 1248)
+        }
+        return dims[size_choice]
+        
+    gr.Button("Generate").click(
+        lambda p, n, s, g, size: model.generate(
+            p, n, *get_dimensions(size), s, g
+        ),
+        [prompt, neg_prompt, step_sl, gs_slider, size_dd],   # <= replace size_radio
+        out_img,
+    )
 
 if __name__ == "__main__":
     # optional: mitigate fragmentation across many reloads

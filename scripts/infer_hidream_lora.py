@@ -12,6 +12,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="HiDream Full Inference with optional LoRA")
     parser.add_argument("--prompt", type=str, required=True, help="Prompt or path to .txt file with prompts (one per line)")
     parser.add_argument("--adapter_path", type=str, default=None, help="Path to LoRA .safetensors file (optional)")
+    parser.add_argument("--adapter_prompt", type=str, default=None, help="Prompt for that specific adapter")
     parser.add_argument("--output_dir", type=str, default="generations")
     parser.add_argument("--lora_scale", type=float, default=0.9)
     parser.add_argument("--guidance_scale", type=float, default=5.0)
@@ -20,7 +21,7 @@ def parse_args():
     parser.add_argument("--height", type=int, default=1024)
     parser.add_argument("--inference_steps", type=int, default=50)
     parser.add_argument("--negative_prompt", type=str, default="ugly, cropped, blurry, low-quality, mediocre average")
-    parser.add_argument("--cfg_zero", action="store_true", help="Use cfg_zero pipeline variant")
+    parser.add_argument("--cfg_zero", action="store_false", help="Use cfg_zero pipeline variant")
     return parser.parse_args()
 
 def load_prompts(prompt_input):
@@ -81,6 +82,11 @@ def main():
     freeze(pipeline.transformer)
 
     for idx, prompt in enumerate(prompts):
+        
+        if args.adapter_prompt:
+            prompt = f"{args.adapter_prompt} {prompt}"
+            print(f"[i] Inferencing on: {prompt}")
+
         t5_embeds, llama_embeds, neg_t5_embeds, neg_llama_embeds, pooled_embeds, neg_pooled_embeds = pipeline.encode_prompt(
             prompt=prompt,
             prompt_2=prompt,
