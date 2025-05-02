@@ -1,6 +1,6 @@
 # SimpleTuner Playground – HiDream
 
-**SimpleTuner Playground** is designed for fast experimentation and benchmarking.  
+**SimpleTuner Playground** is modified for fast experimentation and benchmarking.  
 This is a fork of **SimpleTuner**, edited to reduce configuration overhead. Tested with **HiDream**.
 
 
