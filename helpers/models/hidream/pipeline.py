@@ -848,6 +848,7 @@ class HiDreamImagePipeline(
         width, height = int(width * scale // division * division), int(
             height * scale // division * division
         )
+       
 
         # 2. Set up parameters for generation
         self._guidance_scale = guidance_scale
