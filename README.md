@@ -1,16 +1,12 @@
 # SimpleTuner Playground – HiDream
 
 **SimpleTuner Playground** is designed for fast experimentation and benchmarking.  
-This is a fork of **SimpleTuner**, tuned for **HiDream** training and inference workflows.
+This is a fork of **SimpleTuner**, edited to reduce configuration overhead. Tested with **HiDream**.
 
----
+
 ## 🎨 Character Results
 
 ![HiDream Character Examples](asset/HiDream_Lora_Characters.png)
-
-Character LoRA models trained with SimpleTuner demonstrate high-quality results while maintaining consistency with the base model's style.
-
----
 
 
 ## 🛠️ Setup
